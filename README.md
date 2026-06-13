@@ -123,24 +123,16 @@ hermes skills list
 
 應看到 `open-cite` 出現在清單中。
 
-### 產生單篇引用
+### 單篇引用（自然語言）
+
+直接描述文獻資訊，不需要填寫 JSON 格式：
 
 ```bash
-hermes chat --toolsets skills,terminal --yolo -q '/open-cite {
-  "task_id": "cite_001",
-  "style": "APA",
-  "entry_type": "journal",
-  "fields": {
-    "author": "LeCun, Yann; Bottou, Leon; Bengio, Yoshua",
-    "title": "Gradient-based learning applied to document recognition",
-    "journal": "Proceedings of the IEEE",
-    "year": "1998",
-    "volume": "86",
-    "number": "11",
-    "pages": "2278-2324",
-    "doi": "10.1109/5.726791"
-  }
-}'
+hermes chat --toolsets skills,terminal --yolo -q '/open-cite LeCun 等人 1998 年在 Proceedings of the IEEE 卷86第11期發表的 Gradient-based learning applied to document recognition，頁2278-2324，DOI 10.1109/5.726791，請用 APA 格式'
+```
+
+```bash
+hermes chat --toolsets skills,terminal --yolo -q '/open-cite IEEE format: Vaswani et al., Attention is all you need, NeurIPS 2017, vol.30, pp.5998-6008'
 ```
 
 輸出範例：
@@ -161,29 +153,20 @@ hermes chat --toolsets skills,terminal --yolo -q '/open-cite {
 - `citation`：直接貼進論文參考文獻（Word / 純文字）
 - `bibtex`：貼進 `.bib` 檔，LaTeX 用 `\cite{LeCun1998}` 引用
 
-### 一次處理多篇（batch）
+### 一次處理多篇（自然語言 batch）
 
 ```bash
-hermes chat --toolsets skills,terminal --yolo -q '/open-cite {"citations":[
-  {"task_id":"cite_001","style":"APA","entry_type":"journal","fields":{
-    "author":"Vaswani, Ashish; Shazeer, Noam",
-    "title":"Attention is all you need",
-    "journal":"Advances in Neural Information Processing Systems",
-    "year":"2017","volume":"30","pages":"5998-6008"
-  }},
-  {"task_id":"cite_002","style":"IEEE","entry_type":"conference","fields":{
-    "author":"He, Kaiming; Zhang, Xiangyu",
-    "title":"Deep residual learning for image recognition",
-    "booktitle":"CVPR","year":"2016","pages":"770-778"
-  }}
-]}'
+hermes chat --toolsets skills,terminal --yolo -q '/open-cite 請用 APA 格式處理以下三篇文獻：
+1. LeCun 等人 1998，Gradient-based learning applied to document recognition，Proceedings of the IEEE, 86(11), 2278-2324
+2. Vaswani 等人 2017，Attention is all you need，NeurIPS vol.30 pp.5998-6008
+3. Goodfellow, Ian; Bengio, Yoshua，Deep Learning，MIT Press，2016'
 ```
 
-輸出為單一 JSON block，包含 `"results"` 陣列，每筆對應一篇文獻。
+輸出為單一 JSON block，`"results"` 陣列每筆對應一篇文獻。
 
 ### 缺少必填欄位時
 
-若輸入缺少必填欄位（例如 journal 缺 `year`），skill 會直接回報缺漏清單，不嘗試補全：
+若描述中缺少必填資訊（例如沒有年份），skill 會回報缺漏清單，不猜測補全：
 
 ```json
 {
@@ -193,6 +176,17 @@ hermes chat --toolsets skills,terminal --yolo -q '/open-cite {"citations":[
   "warning": "Missing required fields: year",
   "confidence": 0.0
 }
+```
+
+### 也支援結構化 JSON 輸入
+
+若偏好精確控制每個欄位，仍可傳入 JSON：
+
+```bash
+hermes chat --toolsets skills,terminal --yolo -q '/open-cite {"style":"APA","entry_type":"journal","fields":{
+  "author":"LeCun, Yann; Bottou, Leon","title":"Gradient-based learning",
+  "journal":"Proceedings of the IEEE","year":"1998","volume":"86","pages":"2278-2324"
+}}'
 ```
 
 ---

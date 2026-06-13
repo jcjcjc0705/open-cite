@@ -1,7 +1,7 @@
 ---
 name: open-cite
-description: Given reference metadata (author, title, year, journal, etc.), generate a properly formatted citation string (APA/IEEE/MLA) and a BibTeX entry. Reports missing required fields.
-version: 1.0.0
+description: Generate a formatted citation string (APA/IEEE/MLA) and BibTeX entry from natural language or structured JSON input.
+version: 2.0.0
 metadata:
   hermes:
     tags: [citation, bibtex, apa, ieee, mla]
@@ -12,34 +12,33 @@ metadata:
 
 ## When to Use
 
-When the user provides reference metadata and wants a formatted citation string plus a BibTeX entry. Supports APA, IEEE, and MLA styles for journal articles, conference papers, and books.
+When the user wants a formatted citation string and BibTeX entry. Accepts **natural language**, **structured JSON**, or **a mix of both** for batch requests.
 
-Accepts **single** or **batch** input:
-
-**Single paper:**
+**Natural language (single paper):**
 ```
-/open-cite {"task_id":"cite_001",
-  "style":"APA",
-  "entry_type":"journal",
-  "fields":{
-    "author":"LeCun, Yann; Bottou, Leon; Bengio, Yoshua",
-    "title":"Gradient-based learning applied to document recognition",
-    "journal":"Proceedings of the IEEE",
-    "year":"1998",
-    "volume":"86",
-    "number":"11",
-    "pages":"2278-2324",
-    "doi":"10.1109/5.726791"
-  }}
+/open-cite LeCun 等人 1998 年在 Proceedings of the IEEE 卷86第11期發表的 Gradient-based learning applied to document recognition，頁2278-2324，DOI 10.1109/5.726791，請用 APA 格式
 ```
 
-**Multiple papers (batch):**
 ```
-/open-cite {"citations":[
-  {"task_id":"cite_001","style":"APA","entry_type":"journal","fields":{...}},
-  {"task_id":"cite_002","style":"IEEE","entry_type":"conference","fields":{...}},
-  {"task_id":"cite_003","style":"MLA","entry_type":"book","fields":{...}}
-]}
+/open-cite APA format: Vaswani, Ashish et al., "Attention is all you need", NeurIPS 2017, vol. 30, pp. 5998-6008
+```
+
+**Structured JSON (single paper):**
+```
+/open-cite {"style":"APA","entry_type":"journal","fields":{
+  "author":"LeCun, Yann; Bottou, Leon; Bengio, Yoshua",
+  "title":"Gradient-based learning applied to document recognition",
+  "journal":"Proceedings of the IEEE",
+  "year":"1998","volume":"86","number":"11","pages":"2278-2324","doi":"10.1109/5.726791"
+}}
+```
+
+**Multiple papers (batch, natural language or JSON):**
+```
+/open-cite 請用 APA 格式處理以下三篇文獻：
+1. LeCun 等人 1998，Gradient-based learning，Proceedings of the IEEE, 86(11), 2278-2324
+2. Vaswani 等人 2017，Attention is all you need，NeurIPS vol.30 pp.5998-6008
+3. Goodfellow 等人，Deep Learning，MIT Press，2016
 ```
 
 ## Field Reference
@@ -65,12 +64,29 @@ Follow every step in order.
 
 ### Step 0 — Parse input and detect mode
 
-Inspect the top-level JSON payload:
+**Determine input type:**
 
-- **Batch mode**: if the payload has a `"citations"` key whose value is a list → follow the **Batch Procedure** below.
-- **Single mode**: otherwise, extract `task_id`, `style`, `entry_type`, `fields` and continue with Steps 1–5.
+- **Natural language**: the input is free text (not a JSON object). Extract all bibliographic information from the text (see extraction rules below), then continue with Steps 1–5 using the extracted fields.
+- **Structured JSON with `"citations"` key**: the value is a list → follow the **Batch Procedure** below.
+- **Structured JSON without `"citations"` key**: extract `task_id`, `style`, `entry_type`, `fields` directly, then continue with Steps 1–5.
 
-If `style` or `entry_type` is missing or invalid, use defaults: `style=APA`, `entry_type=journal`.
+**Natural language extraction rules:**
+
+Extract the following from the text:
+- `style`: look for "APA", "IEEE", "MLA" (default: `APA` if not mentioned)
+- `entry_type`: infer from context — "journal"/"期刊" → `journal`; "conference"/"研討會"/"proceedings"/"NeurIPS"/"CVPR"/"ICML" etc. → `conference`; "book"/"書" → `book` (default: `journal`)
+- `task_id`: generate as `"cite_001"` if not provided
+- `fields.author`: extract all author names, convert to `Last, First` format separated by semicolons. If input says "LeCun 等人" or "et al." with only one name, use what is given and note others are unknown.
+- `fields.title`: the title of the paper/book
+- `fields.year`: 4-digit year
+- `fields.journal` / `fields.booktitle` / `fields.publisher`: venue name depending on entry_type
+- `fields.volume`, `fields.number`, `fields.pages`, `fields.doi`: if mentioned
+
+**If multiple papers are described in natural language**, treat as batch: extract each paper's fields independently, then follow the **Batch Procedure**.
+
+**If a required field cannot be extracted**, do NOT guess or fabricate it. Leave it missing; `check_citation.py` will report it in `missing_required`.
+
+If `style` or `entry_type` is missing after extraction, use defaults: `style=APA`, `entry_type=journal`.
 
 ---
 
