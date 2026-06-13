@@ -123,60 +123,38 @@ hermes skills list
 
 應看到 `open-cite` 出現在清單中。
 
-### 單篇引用（自然語言）
+### 呼叫方式
 
-直接描述文獻資訊，不需要填寫 JSON 格式：
-
-```bash
-hermes chat --toolsets skills,terminal --yolo -q '/open-cite LeCun 等人 1998 年在 Proceedings of the IEEE 卷86第11期發表的 Gradient-based learning applied to document recognition，頁2278-2324，DOI 10.1109/5.726791，請用 APA 格式'
-```
+直接用自然語言描述所有文獻，一篇或多篇皆可：
 
 ```bash
-hermes chat --toolsets skills,terminal --yolo -q '/open-cite IEEE format: Vaswani et al., Attention is all you need, NeurIPS 2017, vol.30, pp.5998-6008'
+hermes chat --toolsets skills,terminal --yolo -q '/open-cite 我想用 IEEE 格式，第一篇：LeCun 等人 1998 年在 Proceedings of the IEEE 卷86第11期發表的 Gradient-based learning applied to document recognition，頁2278-2324，DOI 10.1109/5.726791；第二篇：Vaswani 等人 2017，Attention is all you need，NeurIPS vol.30 pp.5998-6008'
 ```
 
-輸出範例：
+### 輸出格式
 
 ```json
 {
-  "task_id": "cite_001",
-  "style": "APA",
-  "entry_type": "journal",
-  "citation": "LeCun, Y., Bottou, L., & Bengio, Y. (1998). Gradient-based learning applied to document recognition. *Proceedings of the IEEE*, *86*(11), 2278–2324. https://doi.org/10.1109/5.726791",
-  "bibtex": "@article{LeCun1998,\n  author = {LeCun, Yann and Bottou, Leon and Bengio, Yoshua},\n  ...\n}",
-  "missing_fields": [],
-  "warning": "",
-  "confidence": 0.95
+  "style": "IEEE",
+  "count": 2,
+  "citation": "[1] Y. LeCun, L. Bottou, and Y. Bengio, \"Gradient-based learning applied to document recognition,\" *Proceedings of the IEEE*, vol. 86, no. 11, pp. 2278–2324, 1998, doi: 10.1109/5.726791.\n[2] A. Vaswani et al., \"Attention is all you need,\" *Advances in Neural Information Processing Systems*, vol. 30, pp. 5998–6008, 2017.",
+  "bibtex": "@article{LeCun1998,\n  author = {LeCun, Yann and Bottou, Leon and Bengio, Yoshua},\n  ...\n}\n\n@article{Vaswani2017,\n  author = {Vaswani, Ashish and ...},\n  ...\n}"
 }
 ```
 
-- `citation`：直接貼進論文參考文獻（Word / 純文字）
-- `bibtex`：貼進 `.bib` 檔，LaTeX 用 `\cite{LeCun1998}` 引用
-
-### 一次處理多篇（自然語言 batch）
-
-```bash
-hermes chat --toolsets skills,terminal --yolo -q '/open-cite 請用 APA 格式處理以下三篇文獻：
-1. LeCun 等人 1998，Gradient-based learning applied to document recognition，Proceedings of the IEEE, 86(11), 2278-2324
-2. Vaswani 等人 2017，Attention is all you need，NeurIPS vol.30 pp.5998-6008
-3. Goodfellow, Ian; Bengio, Yoshua，Deep Learning，MIT Press，2016'
-```
-
-輸出為單一 JSON block，`"results"` 陣列每筆對應一篇文獻。
+- `citation`：包含所有文獻、已編號的完整參考文獻清單，直接貼進論文
+- `bibtex`：所有 BibTeX entry 合併在一起，貼進 `.bib` 檔即可
 
 ### 缺少必填欄位時
 
-若描述中缺少必填資訊（例如沒有年份），skill 會回報缺漏清單，不猜測補全：
+若任何一篇缺少必填資訊，skill **不會輸出結果**，而是用自然語言告知哪幾篇缺哪些欄位：
 
-```json
-{
-  "citation": "",
-  "bibtex": "",
-  "missing_fields": ["year"],
-  "warning": "Missing required fields: year",
-  "confidence": 0.0
-}
-```
+> 第一篇（Gradient-based learning）缺少：year
+> 第三篇（Deep Learning）缺少：publisher
+>
+> 請補充以上資訊後我再繼續。
+
+補充後繼續對話，skill 會重新處理所有文獻。
 
 
 ---
